@@ -1,0 +1,441 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: docker-frontend_ctr:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 2000
+        env:
+        - name: FRONTEND_SERVICE_HTTP_BIND_ADDR
+          value: "0.0.0.0:2000"
+        - name: LUGGAGE_SERVICE_HTTP_DIAL_ADDR
+          value: "luggage:2000"
+        - name: RESERV_SERVICE_HTTP_DIAL_ADDR
+          value: "reserv:2000"
+        - name: REVIEW_SERVICE_HTTP_DIAL_ADDR
+          value: "review:2000"
+        - name: SEARCH_SERVICE_HTTP_DIAL_ADDR
+          value: "search:2000"
+        - name: USER_SERVICE_HTTP_DIAL_ADDR
+          value: "user:2000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 2000
+    targetPort: 2000
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: luggage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: luggage
+  template:
+    metadata:
+      labels:
+        app: luggage
+    spec:
+      containers:
+      - name: luggage
+        image: docker-luggage_ctr:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 2000
+        env:
+        - name: LUGGAGE_DB_DIAL_ADDR
+          value: "luggage-db:3306"
+        - name: LUGGAGE_SERVICE_HTTP_BIND_ADDR
+          value: "0.0.0.0:2000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: luggage
+spec:
+  selector:
+    app: luggage
+  ports:
+  - protocol: TCP
+    port: 2000
+    targetPort: 2000
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: luggage-db
+spec:
+  serviceName: luggage-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: luggage-db
+  template:
+    metadata:
+      labels:
+        app: luggage-db
+    spec:
+      containers:
+      - name: luggage-db
+        image: mysql/mysql-server:latest
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_HOST
+          value: "%"
+        - name: MYSQL_ROOT_PASSWORD
+          value: "pass"
+        volumeMounts:
+        - name: luggage-db-persistent-storage
+          mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+  - metadata:
+      name: luggage-db-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: luggage-db
+spec:
+  clusterIP: None
+  selector:
+    app: luggage-db
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reserv
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reserv
+  template:
+    metadata:
+      labels:
+        app: reserv
+    spec:
+      containers:
+      - name: reserv
+        image: docker-reserv_ctr:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 2000
+        env:
+        - name: RESERV_DB_DIAL_ADDR
+          value: "reserv-db:27017"
+        - name: RESERV_SERVICE_HTTP_BIND_ADDR
+          value: "0.0.0.0:2000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reserv
+spec:
+  selector:
+    app: reserv
+  ports:
+  - protocol: TCP
+    port: 2000
+    targetPort: 2000
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: reserv-db
+spec:
+  serviceName: reserv-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reserv-db
+  template:
+    metadata:
+      labels:
+        app: reserv-db
+    spec:
+      containers:
+      - name: reserv-db
+        image: mongo:latest
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: reserv-db-persistent-storage
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: reserv-db-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reserv-db
+spec:
+  clusterIP: None
+  selector:
+    app: reserv-db
+  ports:
+  - protocol: TCP
+    port: 27017
+    targetPort: 27017
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review
+  template:
+    metadata:
+      labels:
+        app: review
+    spec:
+      containers:
+      - name: review
+        image: docker-review_ctr:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 2000
+        env:
+        - name: REVIEW_DB_DIAL_ADDR
+          value: "review-db:27017"
+        - name: REVIEW_SERVICE_HTTP_BIND_ADDR
+          value: "0.0.0.0:2000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: review
+spec:
+  selector:
+    app: review
+  ports:
+  - protocol: TCP
+    port: 2000
+    targetPort: 2000
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: review-db
+spec:
+  serviceName: review-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review-db
+  template:
+    metadata:
+      labels:
+        app: review-db
+    spec:
+      containers:
+      - name: review-db
+        image: mongo:latest
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: review-db-persistent-storage
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: review-db-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-db
+spec:
+  clusterIP: None
+  selector:
+    app: review-db
+  ports:
+  - protocol: TCP
+    port: 27017
+    targetPort: 27017
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search
+  template:
+    metadata:
+      labels:
+        app: search
+    spec:
+      containers:
+      - name: search
+        image: docker-search_ctr:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 2000
+        env:
+        - name: LUGGAGE_SERVICE_HTTP_DIAL_ADDR
+          value: "luggage:2000"
+        - name: RESERV_SERVICE_HTTP_DIAL_ADDR
+          value: "reserv:2000"
+        - name: SEARCH_SERVICE_HTTP_BIND_ADDR
+          value: "0.0.0.0:2000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search
+spec:
+  selector:
+    app: search
+  ports:
+  - protocol: TCP
+    port: 2000
+    targetPort: 2000
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      containers:
+      - name: user
+        image: docker-user_ctr:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 2000
+        env:
+        - name: USER_DB_DIAL_ADDR
+          value: "user-db:27017"
+        - name: USER_SERVICE_HTTP_BIND_ADDR
+          value: "0.0.0.0:2000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user
+spec:
+  selector:
+    app: user
+  ports:
+  - protocol: TCP
+    port: 2000
+    targetPort: 2000
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: user-db
+spec:
+  serviceName: user-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-db
+  template:
+    metadata:
+      labels:
+        app: user-db
+    spec:
+      containers:
+      - name: user-db
+        image: mongo:latest
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: user-db-persistent-storage
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: user-db-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-db
+spec:
+  clusterIP: None
+  selector:
+    app: user-db
+  ports:
+  - protocol: TCP
+    port: 27017
+    targetPort: 27017
